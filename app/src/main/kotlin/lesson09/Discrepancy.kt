@@ -21,7 +21,7 @@ class DiscrepancyBuilder {
     fun discrepancy(path: String, expected: String, actual: String) {
         discrepancies += Discrepancy(path, expected, actual)
     }
-    fun build(): ValidateResult {
+    fun result(): ValidateResult {
         return if (discrepancies.isEmpty()) {
             ValidateResult.OkValid
         } else {
