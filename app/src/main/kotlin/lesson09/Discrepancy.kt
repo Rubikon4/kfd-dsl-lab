@@ -4,11 +4,28 @@ data class Discrepancy (
     val path : String,
     val expected : String,
     val actual : String
-    val b : MutableList
 )
 
 sealed interface ValidateResult{
-    data object OkValid : ValidateResult
-    data class BadValid (val discrepancies: MutableList<Discrepancy>) : ValidateResult
+    val discrepancies : List<Discrepancy>
+
+    data object OkValid : ValidateResult {
+        override val discrepancies : List<Discrepancy> = emptyList()
+    }
+    data class BadValid (override val discrepancies: List<Discrepancy>) : ValidateResult
 }
 
+class DiscrepancyBuilder {
+    private val discrepancies: MutableList<Discrepancy> = mutableListOf()
+
+    fun discrepancy(path: String, expected: String, actual: String) {
+        discrepancies += Discrepancy(path, expected, actual)
+    }
+    fun build(): ValidateResult {
+        return if (discrepancies.isEmpty()) {
+            ValidateResult.OkValid
+        } else {
+            ValidateResult.BadValid(discrepancies.toList())
+        }
+    }
+}
