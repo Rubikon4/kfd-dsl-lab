@@ -34,8 +34,8 @@ class StatusValidator(
         if (expectedStatus != actualStatus)
             errors.discrepancy(
                 "status",
-                expectedStatus.toString(),
-                actualStatus.toString())
+                "Expected status: ${expectedStatus.toString()}",
+                "Actual status is ${actualStatus.toString()}")
 
     }
 }
