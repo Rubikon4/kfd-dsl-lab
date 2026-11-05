@@ -1,5 +1,7 @@
 package lesson09
 
+import kotlin.math.exp
+
 @DslMarker
 annotation class ValidationDsl
 
@@ -10,13 +12,16 @@ class Validator(
 ) {
     fun status(block: StatusValidator.() -> Unit) : Unit {
         val status = StatusValidator(response.status, errors)
+        status.block()
     }
     fun header(headerName: String, block: HeaderValidator.() -> Unit) : Unit {
         val headerValues = headerValues(response, headerName)
         val header = HeaderValidator(headerName, headerValues, errors)
+        header.block()
     }
     fun body(block: BodyValidator.() -> Unit) : Unit {
         val body = BodyValidator(response.body, errors)
+        body.block()
     }
 }
 
@@ -41,17 +46,32 @@ class HeaderValidator(
     private val headerValues: List<String>,
     private val errors: DiscrepancyBuilder
 ) {
-    fun equalTo() {}
+    fun equalTo(expectedValue: String) {
+        if (headerValues.none { it == expectedValue })
+            errors.discrepancy(
+                "header.$headerName",
+                "value was expected: $expectedValue",
+                "there is no expected value in current header"
+            )
+    }
     fun startsWith(expectedValue: String) {
         val firstValue = headerValues.first()
         if (firstValue != expectedValue)
             errors.discrepancy(
                 "headers.$headerName",
-                expectedValue,
-                firstValue
+                "first value was expected to be $expectedValue",
+                "first value is actual $firstValue"
             )
     }
-    fun satisfies() {}
+    fun satisfies(expectation: String, check: (String) -> Boolean) {
+        if (headerValues.none(check)) {
+            errors.discrepancy(
+                "headers.$headerName",
+                "expectation: $expectation",
+                headerValues.toString(),
+            )
+        }
+    }
 }
 
 @ValidationDsl
@@ -89,6 +109,7 @@ class FieldValidator {
 //    fun equalTo() {}
 }
 
+// entry-point DSL
 fun validate(response: HttpResponse, build: Validator.() -> Unit) : ValidateResult {
     val errors = DiscrepancyBuilder()
     val v = Validator(response, errors)
@@ -96,6 +117,7 @@ fun validate(response: HttpResponse, build: Validator.() -> Unit) : ValidateResu
     return errors.result()
 }
 
+// parse headers with key to Map of header[values]
 private fun headerValues(response: HttpResponse, name: String): List<String> =
     response.headers.entries
         .filter { it.key.equals(name, ignoreCase = true) }
