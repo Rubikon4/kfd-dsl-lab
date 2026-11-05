@@ -1,5 +1,7 @@
 package lesson09
 
+import lesson09.support.json.JsonParseResult
+import lesson09.support.json.parseJsonObject
 import kotlin.math.exp
 
 @DslMarker
@@ -80,7 +82,7 @@ class BodyValidator(
     private val errors: DiscrepancyBuilder
 ) {
     fun absentOrEmpty() {
-        if (actualBody.isNullOrEmpty())
+        if (!actualBody.isNullOrEmpty())
             errors.discrepancy(
                 "body",
                 "non-null or empty body",
@@ -93,12 +95,39 @@ class BodyValidator(
                 "non-empty body",
                 if (actualBody == null) "body is <null>" else "body is empty(\"\")")
     }
-    fun json() {}
+    fun json(block: JsonValidator.() -> Unit) : Unit {
+        if (actualBody == null) {
+            errors.discrepancy(
+                "body.json",
+                "existing json object",
+                "json is <null>"
+            )
+            return
+        }
+        when (val result = parseJsonObject(actualBody)) {
+            is JsonParseResult.Success -> {
+                val json = JsonValidator(result.fields, errors)
+                json.block()
+            }
+             is JsonParseResult.Failure -> {
+                 errors.discrepancy(
+                     "body.json",
+                     "success parse of json",
+                     "failure, reason: ${result.reason}"
+                 )
+             }
+
+
+        }
+    }
 }
 
 @ValidationDsl
-class JsonValidator {
-    fun field() {}
+class JsonValidator(
+    private val fields: Map<String, Any?>,
+    private val errors: DiscrepancyBuilder
+) {
+    fun field(name: String, block: FieldValidator.() -> Unit) : Unit {}
 }
 
 @ValidationDsl
